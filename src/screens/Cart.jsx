@@ -1,58 +1,58 @@
-import {StyleSheet, Text, View, FlatList, Pressable} from 'react-native';
+import {StyleSheet, Text, FlatList, View} from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/AntDesign';
+import CartItem from '../components/CartItem';
 
 const Cart = () => {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState([]); // array of keys of cart-items
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const loadCart = async () => {
-      const storedCart = await AsyncStorage.getItem('cart');
-      const parsedCart = storedCart ? JSON.parse(storedCart) : [];
-      setCart(parsedCart);
-      setTotal(
-        parsedCart.reduce(
-          (sum, item) => sum + (item.price || 0) * (item.qty || 1),
-          0,
-        ),
-      );
+      try {
+        const storedCart = await AsyncStorage.getAllKeys();
+        setCart(storedCart);
+      } catch (e) {
+        console.error('Error loading cart:', e);
+      }
     };
     loadCart();
-  }, []);
+  }, []); // Dependency array excludes `cart`
 
-  const removeFromCart = async item => {
-    const updatedCart = cart.filter(cartItem => cartItem.id !== item.id);
-    setCart(updatedCart);
-    setTotal(
-      updatedCart.reduce(
-        (sum, item) => sum + (item.price || 0) * (item.qty || 1),
-        0,
-      ),
-    );
-    await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
+  useEffect(() => {
+    if (cart.length > 0) {
+      calculateTotal();
+    }
+  }, [cart]); // Separate effect for recalculating total
+
+  const calculateTotal = async () => {
+    try {
+      const itemsArray = await AsyncStorage.multiGet(cart);
+      const totalCost = itemsArray.reduce((sum, [_, itemString]) => {
+        const item = JSON.parse(itemString);
+        return sum + (item?.qty || 0) * (item?.price || 0);
+      }, 0);
+
+      setTotal(totalCost);
+    } catch (e) {
+      console.error('Error calculating total:', e);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Cart Items</Text>
+      <Text style={styles.title}>Cart</Text>
+      <Text style={{fontSize: 16, fontWeight: 'semibold'}}>Review items</Text>
       <FlatList
         data={cart}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <View style={styles.cartItem}>
-            <Text>{item.name}</Text>
-            <Text>${parseInt(item.price).toFixed(2)}</Text>
-            <Text>{item.qty}</Text>
-            <Pressable onPress={() => removeFromCart(item)}>
-              <Icon name="minuscircleo" size={20} color={'red'} />
-            </Pressable>
-          </View>
-        )}
+        keyExtractor={id => id}
+        renderItem={({id}) => <CartItem id={id} cart={cart} />}
       />
-      <Text style={{fontSize: 16}}>Total: ${total.toFixed(2)}</Text>
+      <View style={{display: 'flex'}}>
+        <Text style={styles.totalText}>Amount to be paid</Text>
+        <Text style={styles.totalText}>₹{total}</Text>
+      </View>
     </SafeAreaView>
   );
 };
@@ -60,13 +60,7 @@ const Cart = () => {
 export default Cart;
 
 const styles = StyleSheet.create({
-  container: {padding: 10, alignContent: 'center', gap: 3},
+  container: {padding: 10, alignContent: 'center', gap: 5},
   title: {fontSize: 20, fontWeight: 'bold'},
-  cartItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
+  totalText: {fontSize: 16, fontWeight: 'bold'},
 });

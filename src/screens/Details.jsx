@@ -4,7 +4,7 @@ import {Pressable, ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Details = ({navigation, route}) => {
+const Details = ({route}) => {
   const {item} = route.params;
   const ingredients = Array.from({length: 20}, (_, index) => {
     const ingredientKey = `strIngredient${index + 1}`;
@@ -18,45 +18,59 @@ const Details = ({navigation, route}) => {
   );
 
   const loadCart = async () => {
-    const storedCart = await AsyncStorage.getItem('cart');
-    const parsedCart = storedCart ? JSON.parse(storedCart) : [];
-    return parsedCart;
+    try {
+      const storedCart = await AsyncStorage.getAllKeys();
+      return storedCart ? storedCart : [];
+    } catch (e) {}
   };
 
   const addToCart = async item => {
-    let fetchedCart = await loadCart(); // Load the existing cart
+    try {
+      let fetchedCart = await loadCart(); // Load the existing cart
 
-    // Check if item already exists in the cart
-    const existingItem = fetchedCart.find(
-      cartItem => cartItem.id === item.idMeal,
-    );
+      const existing = fetchedCart.find(id => id === item.idMeal);
+      if (existing) {
+        const itemString = await AsyncStorage.getItem(id);
+        const existingItem = JSON.parse(itemString); // Assuming item is stored as JSON
 
-    const cartItem = {
-      id: item.idMeal,
-      price: parseInt(item.idMeal),
-      qty: existingItem ? existingItem.qty + 1 : 1,
-      name: item.strMeal,
-    };
+        const cartItem = {
+          id: item.idMeal,
+          price: parseInt(item.idMeal),
+          qty: existingItem.qty + 1,
+          name: item.strMeal,
+          img: item.strMealThumb,
+        };
 
-    // Update cart by replacing existing item or adding new one
-    fetchedCart = fetchedCart.filter(cartItem => cartItem.id !== item.idMeal);
-    const updatedCart = [...fetchedCart, cartItem];
+        await AsyncStorage.setItem(item.idMeal, JSON.stringify(cartItem));
+      } else {
+        const cartItem = {
+          id: item.idMeal,
+          price: parseInt(item.idMeal),
+          qty: 1,
+          name: item.strMeal,
+          img: item.strMealThumb,
+        };
+        await AsyncStorage.setItem(item.idMeal, JSON.stringify(cartItem));
+      }
 
-    // Save the updated cart
-    await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
-
-    Alert.alert(
-      'Item added to Cart',
-      `${cartItem.name} price: $${cartItem.price} quantity: ${cartItem.qty}`,
-      [{text: 'OK', onPress: () => console.log('OK Pressed')}],
-    );
+      Alert.alert(
+        'Hurray!',
+        `${cartItem.name} of price: $${cartItem.price} with quantity: ${cartItem.qty} added`,
+        [{text: 'OK', onPress: () => console.log('OK Pressed')}],
+      );
+    } catch (e) {
+      Alert.alert("Couldn't add, try again!!");
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <Image style={styles.image} source={{uri: item.strMealThumb}} />
-        <Text style={styles.title}>{item.strMeal}</Text>
+        <View style={styles.titleBox}>
+          <Text style={styles.title}>{item.strMeal}</Text>
+          <Text style={{fontSize: 18, fontWeight: 'semibold'}}>₹176</Text>
+        </View>
         <View>
           <View style={styles.box}>
             <Text style={styles.boxTitle}>Ingredients</Text>
@@ -66,8 +80,8 @@ const Details = ({navigation, route}) => {
             <Text style={styles.boxTitle}>Preparation Instructions</Text>
             <Text style={styles.boxContent}>{item.strInstructions}</Text>
           </View>
-          <Pressable onPress={() => addToCart(item)}>
-            <Button title="add to cart"></Button>
+          <Pressable style={{margin: 10}} onPress={() => addToCart(item)}>
+            <Button color={'red'} title="Add +"></Button>
           </Pressable>
         </View>
       </ScrollView>
@@ -80,7 +94,6 @@ export default Details;
 const styles = StyleSheet.create({
   container: {
     gap: 5,
-    padding: 10,
   },
   image: {
     width: '100%',
@@ -89,11 +102,9 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     fontSize: 25,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
   box: {
-    marginVertical: 3,
+    margin: 5,
   },
   boxTitle: {
     fontSize: 20,
@@ -102,5 +113,12 @@ const styles = StyleSheet.create({
   },
   boxContent: {
     padding: 2,
+  },
+  titleBox: {
+    width: '400',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    margin: 3,
   },
 });

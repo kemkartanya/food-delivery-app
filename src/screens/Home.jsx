@@ -1,13 +1,6 @@
-import {
-  Text,
-  SafeAreaView,
-  Image,
-  StyleSheet,
-  View,
-  FlatList,
-  Pressable,
-} from 'react-native';
+import {SafeAreaView, StyleSheet, View, FlatList} from 'react-native';
 import {useState, useEffect} from 'react';
+import Item from '../components/Item';
 
 const API_URL = 'https://www.themealdb.com/api/json/v1/1/search.php?s=';
 
@@ -24,28 +17,10 @@ const Home = ({navigation}) => {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={meals}
-        renderItem={({item}) => (
-          <View style={styles.card}>
-            <Pressable
-              onPress={() =>
-                navigation.navigate('Details', {
-                  item: item,
-                })
-              }>
-              <Image
-                style={styles.image}
-                source={{
-                  uri: item.strMealThumb,
-                }}
-              />
-            </Pressable>
-
-            <Text>{item.strMeal}</Text>
-          </View>
-        )}
+        renderItem={({item}) => <Item item={item} navigation={navigation} />}
         keyExtractor={item => item.idMeal}
         ItemSeparatorComponent={<View style={{height: 10}} />}
-        numColumns={3}
+        numColumns={2}
         columnWrapperStyle={{justifyContent: 'space-evenly'}}
       />
     </SafeAreaView>
@@ -61,11 +36,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#dadada',
     padding: 10,
   },
-  image: {
-    width: 80,
-    height: 65,
-    borderRadius: 20,
-  },
   text: {
     color: 'white',
     fontSize: 20,
@@ -78,13 +48,4 @@ const styles = StyleSheet.create({
     width: 105,
   },
   btnText: {fontWeight: '400'},
-  card: {
-    padding: 5,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: 100,
-    height: 100,
-    alignItems: 'center',
-    gap: 5,
-  },
 });

@@ -14,7 +14,7 @@ function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: 'blue',
+        tabBarActiveTintColor: 'red',
       }}>
       <Tab.Screen
         name="Home"
