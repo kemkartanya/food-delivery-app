@@ -1,25 +1,12 @@
 import {StyleSheet, Text, View, Image, Pressable} from 'react-native';
-import React, {useEffect, useState} from 'react';
 import Icon from 'react-native-vector-icons/Entypo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {EventRegister} from 'react-native-event-listeners';
 
-const CartItem = ({id, cart}) => {
-  const [item, setItem] = useState({});
-
-  useEffect(() => {
-    const getItem = async () => {
-      try {
-        const fetchedI = AsyncStorage.getItem(id);
-        setItem(JSON.parse(fetchedI));
-      } catch (e) {}
-    };
-
-    getItem();
-  }, []);
-
+const CartItem = ({item}) => {
   const removeFromCart = async () => {
     try {
-      const existing = cart.find(id => id === item.id);
+      const existing = await AsyncStorage.getItem(item.id);
 
       if (existing) {
         if (item.qty === 1) {
@@ -28,17 +15,23 @@ const CartItem = ({id, cart}) => {
           item.qty -= 1;
           await AsyncStorage.setItem(item.id, JSON.stringify(item));
         }
+
+        // Trigger cart update event
+        EventRegister.emit('updateCart');
       }
     } catch (e) {}
   };
 
   const addToCart = async () => {
     try {
-      const existing = cart.find(id => id === item.id);
+      const existing = await AsyncStorage.getItem(item.id);
 
       if (existing) {
         item.qty += 1;
         await AsyncStorage.setItem(item.id, JSON.stringify(item));
+
+        // Trigger cart update event
+        EventRegister.emit('updateCart');
       }
     } catch (e) {}
   };

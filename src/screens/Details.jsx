@@ -3,6 +3,7 @@ import React from 'react';
 import {Pressable, ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {EventRegister} from 'react-native-event-listeners';
 
 const Details = ({route}) => {
   const {item} = route.params;
@@ -17,49 +18,56 @@ const Details = ({route}) => {
       ingredient.toLowerCase() !== 'null',
   );
 
-  const loadCart = async () => {
+  const getCartItem = async id => {
     try {
-      const storedCart = await AsyncStorage.getAllKeys();
-      return storedCart ? storedCart : [];
-    } catch (e) {}
+      const itemString = await AsyncStorage.getItem(id);
+      return itemString ? JSON.parse(itemString) : null;
+    } catch (error) {
+      console.error(`Error retrieving item with id ${id}:`, error);
+      return null;
+    }
+  };
+
+  const saveCartItem = async (id, item) => {
+    try {
+      await AsyncStorage.setItem(id, JSON.stringify(item));
+    } catch (error) {
+      console.error(`Error saving item with id ${id}:`, error);
+      throw error;
+    }
   };
 
   const addToCart = async item => {
     try {
-      let fetchedCart = await loadCart(); // Load the existing cart
+      let cartItem = await getCartItem(item.idMeal);
 
-      const existing = fetchedCart.find(id => id === item.idMeal);
-      if (existing) {
-        const itemString = await AsyncStorage.getItem(id);
-        const existingItem = JSON.parse(itemString); // Assuming item is stored as JSON
-
-        const cartItem = {
-          id: item.idMeal,
-          price: parseInt(item.idMeal),
-          qty: existingItem.qty + 1,
-          name: item.strMeal,
-          img: item.strMealThumb,
-        };
-
-        await AsyncStorage.setItem(item.idMeal, JSON.stringify(cartItem));
+      if (cartItem) {
+        // Update existing item
+        cartItem.qty += 1;
       } else {
-        const cartItem = {
+        // Add new item
+        cartItem = {
           id: item.idMeal,
-          price: parseInt(item.idMeal),
+          price: parseInt(item.idMeal, 10), // Ensure proper numeric conversion
           qty: 1,
           name: item.strMeal,
           img: item.strMealThumb,
         };
-        await AsyncStorage.setItem(item.idMeal, JSON.stringify(cartItem));
       }
+
+      await saveCartItem(item.idMeal, cartItem);
+
+      // Trigger cart update event
+      EventRegister.emit('updateCart');
 
       Alert.alert(
         'Hurray!',
         `${cartItem.name} of price: $${cartItem.price} with quantity: ${cartItem.qty} added`,
         [{text: 'OK', onPress: () => console.log('OK Pressed')}],
       );
-    } catch (e) {
-      Alert.alert("Couldn't add, try again!!");
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      Alert.alert("Couldn't add item to cart. Please try again!");
     }
   };
 
