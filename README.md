@@ -29,3 +29,6 @@ Use AsyncStorage to persist cart data locally.
 
 React Native, AsyncStorage (local storage), JavaScript
 
+## Demo
+
+![demo](https://github.com/kemkartanya/food-delivery-app/src/assets/demo.mov)
